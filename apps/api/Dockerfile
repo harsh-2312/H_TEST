@@ -5,7 +5,8 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 RUN npm install
 COPY . .
-RUN npm run prisma:generate && npm run build
+# RUN npm run prisma:generate && npm run build
+RUN npx prisma generate && npm run build
 
 FROM node:20-alpine AS runtime
 WORKDIR /usr/src/app
