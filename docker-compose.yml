@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ledger
+      POSTGRES_PASSWORD: ledgerpass
+      POSTGRES_DB: ledger
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://ledger:ledgerpass@db:5432/ledger
+      # IMPORTANT: Change these secrets before deploying to production!
+      JWT_SECRET: supersecret_change_me_min_64_chars_please
+      REFRESH_TOKEN_SECRET: refreshsecret_change_me_min_64_chars_different
+      CLIENT_URL: http://localhost:3000
+      PORT: 4000
+    ports:
+      - '4000:4000'
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_APP_NAME: Ledger Core
+    ports:
+      - '3000:3000'
+
+volumes:
+  db-data:

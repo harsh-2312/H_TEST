@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  STAFF
+  ACCOUNTANT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  CREDIT
+  PAYMENT_RECEIVED
+  PAYMENT_DUE
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum PaymentMethodCategory {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CARD
+  OTHER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  CREDIT
+}
+
+model Business {
+  id             String             @id @default(cuid())
+  name           String
+  ownerId        String
+  owner          User               @relation("BusinessOwner", fields: [ownerId], references: [id])
+  members        BusinessMember[]
+  transactions   Transaction[]
+  categories     Category[]
+  paymentMethods PaymentMethod[]
+  devices        Device[]
+  notifications  Notification[]
+  auditLogs      TransactionAuditLog[]
+  syncQueue      SyncQueue[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([ownerId])
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String
+  passwordHash     String
+  role             UserRole         @default(STAFF)
+  isActive         Boolean          @default(true)
+  businessMemberships BusinessMember[]
+  ownedBusinesses  Business[]       @relation("BusinessOwner")
+  sessions         Session[]
+  auditLogs        TransactionAuditLog[] @relation("performedBy")
+  createdTransactions Transaction[] @relation("createdBy")
+  updatedTransactions Transaction[] @relation("updatedBy")
+  deletedTransactions Transaction[] @relation("deletedBy")
+  devices          Device[]
+  syncQueue        SyncQueue[]
+  notifications    Notification[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([email])
+}
+
+model BusinessMember {
+  id         String   @id @default(cuid())
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  role       UserRole
+  joinedAt   DateTime @default(now())
+
+  @@unique([businessId, userId])
+  @@index([businessId])
+  @@index([userId])
+}
+
+model Transaction {
+  id               String           @id @default(cuid())
+  transactionId    String           @unique
+  business         Business         @relation(fields: [businessId], references: [id])
+  businessId       String
+  createdBy        User             @relation("createdBy", fields: [createdById], references: [id])
+  createdById      String
+  updatedBy        User             @relation("updatedBy", fields: [updatedById], references: [id])
+  updatedById      String
+  deletedBy        User?            @relation("deletedBy", fields: [deletedById], references: [id])
+  deletedById      String?
+  amount           Decimal          @db.Decimal(20, 8)
+  type             TransactionType
+  paymentMethod    PaymentMethod    @relation(fields: [paymentMethodId], references: [id])
+  paymentMethodId  String
+  category         Category         @relation(fields: [categoryId], references: [id])
+  categoryId       String
+  note             String
+  occurredAt       DateTime
+  deviceId         String
+  syncVersion      Int              @default(1)
+  isDeleted        Boolean          @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  auditLogs        TransactionAuditLog[]
+
+  @@index([businessId, occurredAt])
+  @@index([businessId, paymentMethodId])
+  @@index([businessId, categoryId])
+}
+
+model TransactionAuditLog {
+  id            String         @id @default(cuid())
+  transaction   Transaction    @relation(fields: [transactionId], references: [id])
+  transactionId String
+  action        AuditAction
+  performedBy   User           @relation("performedBy", fields: [performedById], references: [id])
+  performedById String
+  business      Business       @relation(fields: [businessId], references: [id])
+  businessId    String
+  oldValue      Json?
+  newValue      Json?
+  deviceId      String
+  createdAt     DateTime       @default(now())
+
+  @@index([businessId, transactionId])
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  business    Business     @relation(fields: [businessId], references: [id])
+  businessId  String
+  name        String
+  type        CategoryType
+  isDefault   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  transactions Transaction[]
+
+  @@unique([businessId, name])
+  @@index([businessId, type])
+}
+
+model PaymentMethod {
+  id          String       @id @default(cuid())
+  business    Business     @relation(fields: [businessId], references: [id])
+  businessId  String
+  name        String
+  category    PaymentMethodCategory
+  isDefault   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  transactions Transaction[]
+
+  @@unique([businessId, name])
+  @@index([businessId, category])
+}
+
+model SyncQueue {
+  id         String   @id @default(cuid())
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  device     Device   @relation(fields: [deviceId], references: [id])
+  deviceId   String
+  entity     String
+  operation  String
+  payload    Json
+  status     String   @default("PENDING")
+  retryCount Int      @default(0)
+  lockedAt   DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId, status])
+}
+
+model Device {
+  id         String   @id @default(cuid())
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  name       String
+  lastSeenAt DateTime @default(now())
+  syncVersion Int     @default(1)
+  syncQueue  SyncQueue[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  business    Business @relation(fields: [businessId], references: [id])
+  businessId  String
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  title       String
+  body        String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([businessId, userId])
+}
