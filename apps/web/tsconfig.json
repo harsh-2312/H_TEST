@@ -4,7 +4,6 @@
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "ignoreDeprecations": "6.0",
     "jsx": "preserve",
     "strict": true,
     "esModuleInterop": true,
