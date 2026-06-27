@@ -29,7 +29,7 @@ export default function ReportsPage() {
   useEffect(() => {
     if (!token || !bId) return;
     setLoading(true);
-    authFetch(`/api/transactions?businessId=${bId}&limit=500&from=${from}&to=${to}`, token)
+    authFetch(`/api/transactions?businessId=${bId}&limit=1000&from=${from}&to=${to}T23:59:59`, token)
       .then(d => setTxns(d.transactions || []))
       .catch(console.error)
       .finally(() => setLoading(false));
