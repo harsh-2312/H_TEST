@@ -39,7 +39,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 rounded-2xl bg-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
             <span className="text-white font-bold text-3xl">₹</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Hisabo</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Kharchoo</h1>
           <p className="text-gray-400 text-sm mt-1">Aapka Business Ka Hisab</p>
         </div>
 
