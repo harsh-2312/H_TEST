@@ -24,18 +24,40 @@ export default function TransactionsPage() {
   const [txns, setTxns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
+  const [members, setMembers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState("ALL");
   const bId = user?.businessIds?.[0];
+  const isOwner = user?.role === "OWNER" || user?.role === "MANAGER";
 
   function loadTxns() {
     if (!token || !bId) return;
     setLoading(true);
-    authFetch(`/api/transactions?businessId=${bId}&limit=100`, token)
+
+    // Staff sirf apni entries dekhe
+    const userFilter = isOwner
+      ? (selectedUserId !== "ALL" ? `&userId=${selectedUserId}` : "")
+      : `&userId=${user?.id}`;
+
+    authFetch(`/api/transactions?businessId=${bId}&limit=100${userFilter}`, token)
       .then((d) => setTxns(d.transactions || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { loadTxns(); }, [token, bId]);
+  useEffect(() => {
+    if (!token || !bId) return;
+    loadTxns();
+    // Owner ke liye team members load karo filter ke liye
+    if (isOwner) {
+      authFetch(`/api/users?businessId=${bId}`, token)
+        .then(setMembers)
+        .catch(console.error);
+    }
+  }, [token, bId]);
+
+  useEffect(() => {
+    loadTxns();
+  }, [selectedUserId]);
 
   const filtered = filter === "ALL" ? txns :
     filter === "INCOME" ? txns.filter(t => t.type === "INCOME" || t.type === "PAYMENT_RECEIVED") :
@@ -54,6 +76,7 @@ export default function TransactionsPage() {
   return (
     <AppShell>
       <div className="px-4 py-5 max-w-2xl mx-auto space-y-4">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-900">Transactions</h1>
           <button onClick={() => router.push("/transactions/create")}
@@ -62,6 +85,29 @@ export default function TransactionsPage() {
           </button>
         </div>
 
+        {/* Owner — Staff filter */}
+        {isOwner && members.length > 0 && (
+          <div className="overflow-x-auto no-scrollbar">
+            <div className="flex gap-2 pb-1">
+              <button onClick={() => setSelectedUserId("ALL")}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  selectedUserId === "ALL" ? "bg-orange-500 text-white" : "bg-white border border-gray-200 text-gray-500"
+                }`}>
+                Sabki
+              </button>
+              {members.map(m => (
+                <button key={m.id} onClick={() => setSelectedUserId(m.id)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    selectedUserId === m.id ? "bg-orange-500 text-white" : "bg-white border border-gray-200 text-gray-500"
+                  }`}>
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Summary */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
             <p className="text-xs text-gray-400 mb-1">Total Income</p>
@@ -73,6 +119,7 @@ export default function TransactionsPage() {
           </div>
         </div>
 
+        {/* Filter tabs */}
         <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
           {["ALL", "INCOME", "EXPENSE"].map(f => (
             <button key={f} onClick={() => setFilter(f)}
@@ -84,6 +131,7 @@ export default function TransactionsPage() {
           ))}
         </div>
 
+        {/* Transaction list */}
         {loading ? (
           <div className="text-center py-12 text-gray-400">Loading...</div>
         ) : filtered.length === 0 ? (
@@ -110,6 +158,9 @@ export default function TransactionsPage() {
                         <p className="text-gray-800 text-sm font-medium truncate">{t.note || "—"}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {t.category?.name} · {t.paymentMethod?.name}
+                          {isOwner && t.createdBy?.name && (
+                            <span className="text-orange-400"> · {t.createdBy.name}</span>
+                          )}
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
