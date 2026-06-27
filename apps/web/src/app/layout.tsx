@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { PWARegister } from "@/components/pwa-register";
 
 export const metadata: Metadata = {
-  title: "Hisabo",
-  description: "Aapka Business Ka Hisabo - Simple ledger for your business",
+  title: "Kharchoo",
+  description: "Aapka Business Ka Kharchoo - Simple ledger for your business",
   icons: [
     { rel: "icon", url: "/icons/icon-192.svg" },
     { rel: "apple-touch-icon", url: "/icons/icon-512.svg" }
