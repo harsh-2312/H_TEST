@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { authFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useStore";
 import { AppShell } from "@/components/layout/AppShell";
-import { AddTransactionModal } from "@/components/modals/AddTransactionModal";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
@@ -20,9 +20,9 @@ const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> 
 
 export default function TransactionsPage() {
   const { token, user } = useAuthStore();
+  const router = useRouter();
   const [txns, setTxns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("ALL");
   const bId = user?.businessIds?.[0];
 
@@ -44,7 +44,6 @@ export default function TransactionsPage() {
   const totalIn = txns.filter(t => t.type === "INCOME" || t.type === "PAYMENT_RECEIVED").reduce((s, t) => s + Number(t.amount), 0);
   const totalOut = txns.filter(t => t.type === "EXPENSE" || t.type === "PAYMENT_DUE").reduce((s, t) => s + Number(t.amount), 0);
 
-  // Group by date
   const groups: Record<string, any[]> = {};
   filtered.forEach(t => {
     const d = new Date(t.occurredAt).toDateString();
@@ -55,16 +54,14 @@ export default function TransactionsPage() {
   return (
     <AppShell>
       <div className="px-4 py-5 max-w-2xl mx-auto space-y-4">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-900">Transactions</h1>
-          <button onClick={() => setShowModal(true)}
+          <button onClick={() => router.push("/transactions/create")}
             className="flex items-center gap-1.5 bg-orange-500 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-sm hover:bg-orange-600 active:scale-95 transition-all">
             <span>+</span> Entry
           </button>
         </div>
 
-        {/* Summary */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
             <p className="text-xs text-gray-400 mb-1">Total Income</p>
@@ -76,7 +73,6 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {/* Filter tabs */}
         <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
           {["ALL", "INCOME", "EXPENSE"].map(f => (
             <button key={f} onClick={() => setFilter(f)}
@@ -88,7 +84,6 @@ export default function TransactionsPage() {
           ))}
         </div>
 
-        {/* Transaction list */}
         {loading ? (
           <div className="text-center py-12 text-gray-400">Loading...</div>
         ) : filtered.length === 0 ? (
@@ -133,13 +128,6 @@ export default function TransactionsPage() {
           ))
         )}
       </div>
-
-      {showModal && (
-        <AddTransactionModal
-          onClose={() => setShowModal(false)}
-          onSuccess={() => { setShowModal(false); loadTxns(); }}
-        />
-      )}
     </AppShell>
   );
 }
