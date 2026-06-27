@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="text-white font-bold text-lg">₹</span>
           </div>
           <div>
-            <p className="text-orange-500 font-bold text-lg leading-tight">Hisabo</p>
+            <p className="text-orange-500 font-bold text-lg leading-tight">Kharchoo</p>
             <p className="text-gray-400 text-xs truncate">{user?.name}</p>
           </div>
         </div>
@@ -90,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
               <span className="text-white font-bold text-sm">₹</span>
             </div>
-            <span className="text-orange-500 font-bold text-lg">Hisabo</span>
+            <span className="text-orange-500 font-bold text-lg">Kharchoo</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-gray-500 text-xs">{user?.name}</span>
