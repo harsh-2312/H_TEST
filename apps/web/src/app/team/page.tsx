@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/api";
+import { authFetch, apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useStore";
 import { AppShell } from "@/components/layout/AppShell";
 
@@ -16,6 +16,11 @@ export default function TeamPage() {
   const bId = user?.businessIds?.[0];
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newCreds, setNewCreds] = useState<{ email: string; password: string; name: string } | null>(null);
+
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "STAFF" });
 
   useEffect(() => {
     if (!token || !bId) return;
@@ -32,26 +37,100 @@ export default function TeamPage() {
     } catch (err) { alert((err as Error).message); }
   };
 
+  const handleCreate = async () => {
+    if (!form.name || !form.email || !form.password) return alert("Sab fields bharo!");
+    if (form.password.length < 8) return alert("Password kam se kam 8 characters ka hona chahiye!");
+    setCreating(true);
+    try {
+      await apiFetch("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name: form.name, email: form.email, password: form.password, businessName: form.name + " (Staff)" }),
+      });
+      setNewCreds({ email: form.email, password: form.password, name: form.name });
+      setForm({ name: "", email: "", password: "", role: "STAFF" });
+      setShowForm(false);
+      // Refresh list
+      const updated = await authFetch(`/api/users?businessId=${bId}`, token!);
+      setMembers(updated);
+    } catch (err) {
+      alert((err as Error).message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <AppShell>
       <div className="px-4 py-5 max-w-2xl mx-auto space-y-5">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Team Members</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Kaun kaun aapke business mein hai</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Team Members</h1>
+            <p className="text-gray-400 text-sm mt-0.5">Apni team manage karein</p>
+          </div>
+          {user?.role === "OWNER" && (
+            <button onClick={() => setShowForm(s => !s)}
+              className="bg-orange-500 text-white text-sm font-bold px-4 py-2 rounded-xl shadow hover:bg-orange-600 active:scale-95 transition-all">
+              + Add
+            </button>
+          )}
         </div>
+
+        {/* Add Member Form */}
+        {showForm && (
+          <div className="bg-white border border-orange-100 rounded-2xl p-4 shadow-sm space-y-3">
+            <p className="text-sm font-bold text-gray-800">Naya Member Banayein</p>
+            {[
+              { label: "Naam", key: "name", type: "text", placeholder: "e.g. Ramesh" },
+              { label: "Email", key: "email", type: "email", placeholder: "ramesh@example.com" },
+              { label: "Password", key: "password", type: "text", placeholder: "Min 8 characters" },
+            ].map(f => (
+              <div key={f.key}>
+                <label className="text-xs text-gray-500 mb-1 block">{f.label}</label>
+                <input type={f.type} value={(form as any)[f.key]}
+                  onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-orange-400 focus:bg-white transition" />
+              </div>
+            ))}
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Role</label>
+              <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-orange-400 transition">
+                {["MANAGER", "STAFF", "ACCOUNTANT"].map(r => (
+                  <option key={r} value={r}>{ROLE_META[r].label}</option>
+                ))}
+              </select>
+            </div>
+            <button onClick={handleCreate} disabled={creating}
+              className="w-full bg-orange-500 text-white font-bold py-2.5 rounded-xl hover:bg-orange-600 disabled:opacity-50 transition-all active:scale-95">
+              {creating ? "Bana raha hai..." : "Account Banayein"}
+            </button>
+          </div>
+        )}
+
+        {/* New credentials card */}
+        {newCreds && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-2">
+            <p className="text-green-700 font-bold text-sm">✅ Account ban gaya! Yeh credentials share karein:</p>
+            <div className="bg-white rounded-xl p-3 font-mono text-sm space-y-1">
+              <p><span className="text-gray-400">Naam: </span><span className="text-gray-800 font-semibold">{newCreds.name}</span></p>
+              <p><span className="text-gray-400">Email: </span><span className="text-gray-800 font-semibold">{newCreds.email}</span></p>
+              <p><span className="text-gray-400">Password: </span><span className="text-gray-800 font-semibold">{newCreds.password}</span></p>
+            </div>
+            <button onClick={() => {
+              navigator.clipboard.writeText(`Email: ${newCreds.email}\nPassword: ${newCreds.password}`);
+              alert("Copied!");
+            }} className="w-full bg-green-500 text-white text-sm font-bold py-2 rounded-xl hover:bg-green-600 transition">
+              📋 Copy Credentials
+            </button>
+            <button onClick={() => setNewCreds(null)} className="w-full text-gray-400 text-xs py-1">Dismiss</button>
+          </div>
+        )}
 
         {/* Total count */}
         <div className="bg-orange-50 border border-orange-100 rounded-2xl px-4 py-3 flex items-center justify-between">
           <span className="text-orange-600 text-sm font-medium">Total Members</span>
           <span className="text-orange-600 font-bold text-xl">{members.length}</span>
-        </div>
-
-        {/* Invite info */}
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-          <p className="text-blue-700 text-sm font-semibold">👥 Team Member Kaise Add Karein?</p>
-          <p className="text-blue-500 text-xs mt-1">
-            Unhe <span className="font-mono font-semibold">/auth/register</span> pe register karne ko bolein. Phir admin se businessId assign karwayen.
-          </p>
         </div>
 
         {loading ? (
@@ -83,7 +162,6 @@ export default function TeamPage() {
                       {roleMeta.label}
                     </span>
                   </div>
-                  {/* Role change (only owner can change, not themselves) */}
                   {user?.role === "OWNER" && m.id !== user.id && (
                     <div className="mt-3 pt-3 border-t border-gray-50">
                       <p className="text-xs text-gray-400 mb-2">Role change karein:</p>
