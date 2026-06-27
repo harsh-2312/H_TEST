@@ -294,6 +294,3 @@ ALTER TABLE "Notification" ADD CONSTRAINT "Notification_businessId_fkey" FOREIGN
 -- AddForeignKey
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
-
-ALTER TABLE "BusinessMember" ADD COLUMN IF NOT EXISTS "canAddIncome" BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE "BusinessMember" ADD COLUMN IF NOT EXISTS "canAddExpense" BOOLEAN NOT NULL DEFAULT true;
