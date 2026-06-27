@@ -87,13 +87,15 @@ model User {
 }
 
 model BusinessMember {
-  id         String   @id @default(cuid())
-  business   Business @relation(fields: [businessId], references: [id])
-  businessId String
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String
-  role       UserRole
-  joinedAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  business       Business @relation(fields: [businessId], references: [id])
+  businessId     String
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  role           UserRole
+  canAddIncome   Boolean  @default(true)
+  canAddExpense  Boolean  @default(true)
+  joinedAt       DateTime @default(now())
 
   @@unique([businessId, userId])
   @@index([businessId])
