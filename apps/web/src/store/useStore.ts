@@ -7,6 +7,8 @@ export interface AuthUser {
   email: string;
   role: string;
   businessIds: string[];
+  canAddIncome?: boolean;
+  canAddExpense?: boolean;
 }
 
 interface AuthState {
@@ -15,32 +17,23 @@ interface AuthState {
   user: AuthUser | null;
   setAuth: (payload: { token: string; refreshToken: string; user: any }) => void;
   clearAuth: () => void;
+  updatePermissions: (canAddIncome: boolean, canAddExpense: boolean) => void;
 }
 
-// Simple in-memory store (token survives page within session; login page redirects to dashboard)
 const getInitialAuthState = () => {
   if (typeof window === "undefined") {
     return { token: null, refreshToken: null, user: null };
   }
-
   const token = sessionStorage.getItem("lc_token");
   const refreshToken = sessionStorage.getItem("lc_refresh");
   let user = null;
-
   try {
     const raw = sessionStorage.getItem("lc_user");
-    if (raw) {
-      user = JSON.parse(raw);
-    }
+    if (raw) user = JSON.parse(raw);
   } catch {
     user = null;
   }
-
-  return {
-    token: token || null,
-    refreshToken: refreshToken || null,
-    user,
-  };
+  return { token: token || null, refreshToken: refreshToken || null, user };
 };
 
 const initialAuthState = getInitialAuthState();
@@ -53,6 +46,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     const user = {
       ...payload.user,
       businessIds: payload.user.businessIds ?? (payload.user.businessId ? [payload.user.businessId] : []),
+      canAddIncome: payload.user.canAddIncome ?? true,
+      canAddExpense: payload.user.canAddExpense ?? true,
     };
     if (typeof window !== "undefined") {
       sessionStorage.setItem("lc_token", payload.token);
@@ -60,6 +55,16 @@ export const useAuthStore = create<AuthState>((set) => ({
       sessionStorage.setItem("lc_user", JSON.stringify(user));
     }
     set({ token: payload.token, refreshToken: payload.refreshToken, user });
+  },
+  updatePermissions: (canAddIncome, canAddExpense) => {
+    set((state) => {
+      if (!state.user) return state;
+      const updated = { ...state.user, canAddIncome, canAddExpense };
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("lc_user", JSON.stringify(updated));
+      }
+      return { user: updated };
+    });
   },
   clearAuth: () => {
     if (typeof window !== "undefined") {
